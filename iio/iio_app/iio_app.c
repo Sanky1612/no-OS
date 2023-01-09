@@ -79,6 +79,7 @@
 
 // The default baudrate iio_app will use to print messages to console.
 #define UART_BAUDRATE_DEFAULT	115200
+#define UART_STOPBITS_DEFAULT	NO_OS_UART_STOP_1_BIT
 
 static inline uint32_t _calc_uart_xfer_time(uint32_t len, uint32_t baudrate)
 {
@@ -101,7 +102,7 @@ static int32_t iio_print_uart_info_message(struct no_os_uart_desc **uart_desc,
 
 	delay_ms = _calc_uart_xfer_time(msglen, UART_BAUDRATE_DEFAULT);
 	no_os_mdelay(delay_ms);
-
+	
 	/** Reinitialize UART with parameters required by the IIO application */
 	no_os_uart_remove(*uart_desc);
 	return no_os_uart_init(uart_desc, user_uart_params);
