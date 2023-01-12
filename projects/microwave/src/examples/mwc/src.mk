@@ -35,6 +35,14 @@ INCS += $(INCLUDE)/no_os_gpio.h \
 	$(PLATFORM_DRIVERS)/$(PLATFORM)_delay.h \
 	$(INCLUDE)/no_os_lf256fifo.h
 
-SRC_DIRS += $(DRIVERS)/rf-transceiver/hmc630x
+ifneq (y, $(FAKE))
+SRCS += $(DRIVERS)/rf-transceiver/hmc630x/hmc630x.c
+else
+SRCS += $(DRIVERS)/rf-transceiver/hmc630x/hmc630x_fake.c
+endif
+
+SRCS +=  $(DRIVERS)/rf-transceiver/hmc630x/iio_hmc630x.c 
+INCS += $(DRIVERS)/rf-transceiver/hmc630x/hmc630x.h \
+	$(DRIVERS)/rf-transceiver/hmc630x/iio_hmc630x.h
 
 
