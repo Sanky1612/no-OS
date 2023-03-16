@@ -40,7 +40,7 @@
 #define MDIO_PIN        18
 
 #define PHY_RESET_PORT  1
-#define PHY_RESET_PIN   25
+#define PHY_RESET_PIN   31
 #elif (TARGET_NUM==78000)
 #define RESET_PORT      0
 #define RESET_PIN       9
