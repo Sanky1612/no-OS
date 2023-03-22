@@ -102,7 +102,7 @@ int mwc_algorithms(struct mwc_iio_dev *mwc)
 		if (ret)
 			return ret;
 
-		ret = hmc630x_set_if_attn(tx, mwc_tx_temp_lookup[temp][mwc->admv9611].ifreq);
+		ret = hmc630x_set_if_attn(tx, mwc_tx_temp_lookup[temp][mwc->hbtx].ifreq);
 		if (ret)
 			return ret;
 	}
@@ -112,11 +112,11 @@ int mwc_algorithms(struct mwc_iio_dev *mwc)
 		if (ret)
 			return ret;
 
-		ret = hmc630x_set_if_attn(rx, mwc_rx_temp_lookup[temp][mwc->admv9611].ifreq);
+		ret = hmc630x_set_if_attn(rx, mwc_rx_temp_lookup[temp][mwc->hbtx].ifreq);
 		if (ret)
 			return ret;
 
-		ret = hmc6301_set_lna_gain(rx, mwc_rx_temp_lookup[temp][mwc->admv9611].lna_gain);
+		ret = hmc6301_set_lna_gain(rx, mwc_rx_temp_lookup[temp][mwc->hbtx].lna_gain);
 	}
 
 	if (mwc->tx_autotuning) {
@@ -147,17 +147,17 @@ int mwc_algorithms(struct mwc_iio_dev *mwc)
 			ret = hmc6300_set_rf_attn(tx, attn);
 			if (ret)
 				break;
-			
+
 			if (attn == prev_attn)
 				match_count++;
 			else
 				match_count = 0;
-			
+
 			prev_attn = attn;
 
 			if (match_count == 10 || iter_count == 20)
 				done = true;
-			
+
 			iter_count++;
 		}
 	}
@@ -200,17 +200,17 @@ int mwc_algorithms(struct mwc_iio_dev *mwc)
 			ret = hmc6301_set_bb_attn_fine(rx, attn_fine_reverse[attni_fine], 0);
 			if (ret)
 				break;
-			
+
 			if (attn == prev_attn)
 				match_count++;
 			else
 				match_count = 0;
-			
+
 			prev_attn = attn;
 
 			if (match_count == 10 || iter_count == 20)
 				done = true;
-			
+
 			iter_count++;
 		}
 	}
@@ -232,8 +232,8 @@ int mwc_tx_rx_reset(struct mwc_iio_dev *mwc)
 }
 
 static int mwc_iio_read_attr(void *device, char *buf,
-		uint32_t len, const struct iio_ch_info *channel,
-		intptr_t priv)
+			     uint32_t len, const struct iio_ch_info *channel,
+			     intptr_t priv)
 {
 	struct mwc_iio_dev *iiodev = (struct mwc_iio_dev *)device;
 	int32_t val;
@@ -265,8 +265,8 @@ static int mwc_iio_read_attr(void *device, char *buf,
 }
 
 static int mwc_iio_write_attr(void *device, char *buf,
-		uint32_t len, const struct iio_ch_info *channel,
-		intptr_t priv)
+			      uint32_t len, const struct iio_ch_info *channel,
+			      intptr_t priv)
 {
 	int ret = 0;
 	int32_t val;
@@ -307,7 +307,7 @@ static int mwc_iio_write_attr(void *device, char *buf,
 }
 
 static int mwc_iio_read_raw(void *device, char *buf, uint32_t len,
-			       const struct iio_ch_info *channel, intptr_t priv)
+			    const struct iio_ch_info *channel, intptr_t priv)
 {
 	uint16_t v;
 	int32_t val;
@@ -317,22 +317,22 @@ static int mwc_iio_read_raw(void *device, char *buf, uint32_t len,
 	case IIO_VOLTAGE:
 		switch (channel->ch_num) {
 #if (TARGET_NUM==32650)
-			case 0:
-				adcch = MXC_ADC_CH_0;
-				break;
-			case 1:
-				adcch = MXC_ADC_CH_1;
-				break;
+		case 0:
+			adcch = MXC_ADC_CH_0;
+			break;
+		case 1:
+			adcch = MXC_ADC_CH_1;
+			break;
 #elif (TARGET_NUM==78000)
-			case 0:
-				adcch = MXC_ADC_CH_3;
-				break;
-			case 1:
-				adcch = MXC_ADC_CH_4;
-				break;
+		case 0:
+			adcch = MXC_ADC_CH_3;
+			break;
+		case 1:
+			adcch = MXC_ADC_CH_4;
+			break;
 #endif
-			default:
-				return -EINVAL;
+		default:
+			return -EINVAL;
 		};
 
 		mxc_adc_conversion_req_t req = {
@@ -352,8 +352,8 @@ static int mwc_iio_read_raw(void *device, char *buf, uint32_t len,
 }
 
 static int mwc_iio_read_scale(void *device, char *buf, uint32_t len,
-				 const struct iio_ch_info *channel,
-				 intptr_t priv)
+			      const struct iio_ch_info *channel,
+			      intptr_t priv)
 {
 	int32_t valt;
 	int32_t vals[2];
@@ -454,7 +454,7 @@ static struct iio_device mwc_iio_device_template = {
 };
 
 int mwc_iio_init(struct mwc_iio_dev **iiodev,
-			struct mwc_iio_init_param *init_param)
+		 struct mwc_iio_init_param *init_param)
 {
 	int ret;
 	struct mwc_iio_dev *d;
@@ -476,7 +476,7 @@ int mwc_iio_init(struct mwc_iio_dev **iiodev,
 	d->rx_target = init_param->rx_target;
 	d->tx_auto_ifvga = init_param->tx_auto_ifvga;
 	d->rx_auto_ifvga_rflna = init_param->rx_auto_ifvga_rflna;
-	d->admv9611 = init_param->admv9611;
+	d->hbtx = init_param->hbtx;
 
 	// initialize reset gpio separately
 	ret = no_os_gpio_get(&d->reset_gpio, init_param->reset_gpio_ip);
@@ -492,7 +492,7 @@ int mwc_iio_init(struct mwc_iio_dev **iiodev,
 	ret = MXC_ADC_Init();
 	if (ret)
 		goto end_1;
-	
+
 	struct no_os_pid_config pid_config = {
 		.Kp = 15000,
 		.Ki = 5000,

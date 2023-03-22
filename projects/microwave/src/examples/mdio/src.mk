@@ -12,7 +12,8 @@ SRCS += $(DRIVERS)/api/no_os_gpio.c \
 	$(NO-OS)/util/no_os_util.c \
 	$(NO-OS)/util/no_os_list.c \
 	$(PLATFORM_DRIVERS)/$(PLATFORM)_delay.c \
-	$(DRIVERS)/api/no_os_mdio.c
+	$(DRIVERS)/api/no_os_mdio.c \
+	$(DRIVERS)/net/mdio_bitbang.c
 
 INCS += $(INCLUDE)/no_os_gpio.h \
 	$(PLATFORM_DRIVERS)/$(PLATFORM)_gpio.h \
@@ -33,5 +34,6 @@ INCS += $(INCLUDE)/no_os_gpio.h \
 	$(INCLUDE)/no_os_delay.h \
 	$(PLATFORM_DRIVERS)/$(PLATFORM)_delay.h \
 	$(INCLUDE)/no_os_lf256fifo.h \
-	$(INCLUDE)/no_os_mdio.h
+	$(INCLUDE)/no_os_mdio.h \
+	$(DRIVERS)/net/mdio_bitbang.h
 

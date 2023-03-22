@@ -16,7 +16,7 @@ static int mwc_step(void *arg)
 	struct mwc_iio_dev *mwc = arg;
 	if (!heartbeat_pulse)
 		return 0;
-	
+
 	mwc_algorithms(mwc);
 
 	heartbeat_pulse = false;
@@ -71,7 +71,7 @@ static int heartbeat_prepare(void)
 	ret = no_os_rtc_start(rtc);
 	if (ret)
 		return ret;
-	
+
 	return 0;
 }
 
@@ -79,7 +79,7 @@ int main(void)
 {
 	int ret;
 	// select between (high-band tx) and (low-band tx)
-	const bool hbtx = true;
+	const bool hbtx = false;
 	char hw_model_str[10];
 	if (hbtx)
 		strcpy(hw_model_str, "admv9611");
@@ -102,7 +102,7 @@ int main(void)
 	ret = mwc_iio_init(&mwc, &mwc_ip);
 	if (ret)
 		goto end;
-	
+
 	ret = mwc_tx_rx_reset(mwc);
 	if (ret)
 		goto end;

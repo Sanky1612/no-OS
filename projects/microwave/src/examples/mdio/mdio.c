@@ -57,7 +57,7 @@ int main()
 	ret = no_os_mdio_init(&bphy, &bphyip);
 	if (ret)
 		goto error;
-	
+
 	for (r = 0; r < 32; r++) {
 		ret = no_os_mdio_read(aphy, r, &val);
 		printf("R%.2u 0x%.4x\n", r, val);
@@ -68,14 +68,20 @@ int main()
 		printf("R%.2u 0x%.4x\n", r, val);
 	}
 
-	no_os_mdio_write(aphy, 0x10, 0xff23);
-	no_os_mdio_write(aphy, 0x11, 0xe05);
-	no_os_mdio_read(aphy, 0x11, &val);
+	aphy->c45 = true;
+	// no_os_mdio_write(aphy, 0x10, 0xff23);
+	// no_os_mdio_write(aphy, 0x11, 0xe05);
+	// no_os_mdio_read(aphy, 0x11, &val);
+	no_os_mdio_write(aphy, NO_OS_MDIO_C45_ADDR(0x1e, 0xff23), 0xe05);
+	no_os_mdio_read(aphy, NO_OS_MDIO_C45_ADDR(0x1e, 0xff23), &val);
 	printf("A Reg 0xff23: 0x%x\n", val);
 
-	no_os_mdio_write(bphy, 0x10, 0xff23);
-	no_os_mdio_write(bphy, 0x11, 0xe05);
-	no_os_mdio_read(bphy, 0x11, &val);
+	bphy->c45 = true;
+	// no_os_mdio_write(bphy, 0x10, 0xff23);
+	// no_os_mdio_write(bphy, 0x11, 0xe05);
+	// no_os_mdio_read(bphy, 0x11, &val);
+	no_os_mdio_write(bphy, NO_OS_MDIO_C45_ADDR(0x1e, 0xff23), 0xe05);
+	no_os_mdio_read(bphy, NO_OS_MDIO_C45_ADDR(0x1e, 0xff23), &val);
 	printf("B Reg 0xff23: 0x%x\n", val);
 
 	return 0;
