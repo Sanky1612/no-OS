@@ -84,3 +84,53 @@ struct no_os_gpio_init_param phy_reset_gpio_ip = {
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
+
+struct no_os_gpio_init_param bphy_reset_gpio_ip = {
+	.port = BPHY_RESET_PORT,
+	.number = BPHY_RESET_PIN,
+	.platform_ops = &max_gpio_ops,
+	.extra = &xgpio,
+};
+
+// RevA
+struct no_os_gpio_init_param reset_adin1300_gpio_ip = {
+	.port = RESET_ADIN1300_PORT,
+	.number = RESET_ADIN1300_PIN,
+	.platform_ops = &max_gpio_ops,
+	.extra = &xgpio,
+};
+
+struct no_os_gpio_init_param reset_max24287_gpio_ip = {
+	.port = RESET_MAX24287_PORT,
+	.number = RESET_MAX24287_PIN,
+	.platform_ops = &max_gpio_ops,
+	.extra = &xgpio,
+};
+
+struct no_os_gpio_init_param mdc_adin1300_gpio_ip = {
+	.port = MDC_ADIN1300_PORT,
+	.number = MDC_ADIN1300_PIN,
+	.platform_ops = &max_gpio_ops,
+	.extra = &xgpio,
+};
+
+struct no_os_gpio_init_param mdio_adin1300_gpio_ip = {
+	.port = MDIO_ADIN1300_PORT,
+	.number = MDIO_ADIN1300_PIN,
+	.platform_ops = &max_gpio_ops,
+	.extra = &xgpio,
+};
+
+struct no_os_gpio_init_param mdc_max24287_gpio_ip = {
+	.port = MDC_MAX24287_PORT,
+	.number = MDC_MAX24287_PIN,
+	.platform_ops = &max_gpio_ops,
+	.extra = &xgpio,
+};
+
+struct no_os_gpio_init_param mdio_max24287_gpio_ip = {
+	.port = MDIO_MAX24287_PORT,
+	.number = MDIO_MAX24287_PIN,
+	.platform_ops = &max_gpio_ops,
+	.extra = &xgpio,
+};
