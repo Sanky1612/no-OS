@@ -20,117 +20,115 @@ struct max_gpio_init_param xgpio = {
 	.vssel = MXC_GPIO_VSSEL_VDDIOH,
 };
 
-struct no_os_gpio_init_param reset_gpio_ip = {
-	.port = RESET_PORT,
-	.number = RESET_PIN,
+struct max_gpio_init_param xgpio_1p8 = {
+	.vssel = MXC_GPIO_VSSEL_VDDIOH,
+};
+
+struct no_os_gpio_init_param xcvr_reset_gpio_ip = {
+	.port = XCVR_RESET_PORT,
+	.number = XCVR_RESET_PIN,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
 
-struct no_os_gpio_init_param en_gpio_ip = {
-	.port = EN_PORT,
-	.number = EN_PIN,
+struct no_os_gpio_init_param xcvr_en_gpio_ip = {
+	.port = XCVR_EN_PORT,
+	.number = XCVR_EN_PIN,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
 
-struct no_os_gpio_init_param clk_gpio_ip = {
-	.port = CLK_PORT,
-	.number = CLK_PIN,
+struct no_os_gpio_init_param xcvr_clk_gpio_ip = {
+	.port = XCVR_CLK_PORT,
+	.number = XCVR_CLK_PIN,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
 
-struct no_os_gpio_init_param data_gpio_ip = {
-	.port = DATA_PORT,
-	.number = DATA_PIN,
+struct no_os_gpio_init_param xcvr_data_gpio_ip = {
+	.port = XCVR_DATA_PORT,
+	.number = XCVR_DATA_PIN,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
 
-struct no_os_gpio_init_param scanout_tx_gpio_ip = {
-	.port = SCANOUT_TX_PORT,
-	.number = SCANOUT_TX_PIN,
+struct no_os_gpio_init_param xcvr_scanout_tx_gpio_ip = {
+	.port = XCVR_SCANOUT_TX_PORT,
+	.number = XCVR_SCANOUT_TX_PIN,
 	.pull = NO_OS_PULL_UP,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
 
-struct no_os_gpio_init_param scanout_rx_gpio_ip = {
-	.port = SCANOUT_RX_PORT,
-	.number = SCANOUT_RX_PIN,
+struct no_os_gpio_init_param xcvr_scanout_rx_gpio_ip = {
+	.port = XCVR_SCANOUT_RX_PORT,
+	.number = XCVR_SCANOUT_RX_PIN,
 	.pull = NO_OS_PULL_UP,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
 
-struct no_os_gpio_init_param mdc_gpio_ip = {
-	.port = MDC_PORT,
-	.number = MDC_PIN,
+#if (TARGET_NUM == 32650)
+struct no_os_gpio_init_param adin1300_reset_gpio_ip = {
+	.port = ADIN1300_RESET_PORT,
+	.number = ADIN1300_RESET_PIN,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
 
-struct no_os_gpio_init_param mdio_gpio_ip = {
-	.port = MDIO_PORT,
-	.number = MDIO_PIN,
+struct no_os_gpio_init_param max24287_reset_gpio_ip = {
+	.port = MAX24287_RESET_PORT,
+	.number = MAX24287_RESET_PIN,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
 
-struct no_os_gpio_init_param phy_reset_gpio_ip = {
-	.port = PHY_RESET_PORT,
-	.number = PHY_RESET_PIN,
+struct no_os_gpio_init_param adin1300_mdc_gpio_ip = {
+	.port = ADIN1300_MDC_PORT,
+	.number = ADIN1300_MDC_PIN,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
 
-struct no_os_gpio_init_param bphy_reset_gpio_ip = {
-	.port = BPHY_RESET_PORT,
-	.number = BPHY_RESET_PIN,
-	.platform_ops = &max_gpio_ops,
-	.extra = &xgpio,
-};
-
-// RevA
-struct no_os_gpio_init_param reset_adin1300_gpio_ip = {
-	.port = RESET_ADIN1300_PORT,
-	.number = RESET_ADIN1300_PIN,
-	.platform_ops = &max_gpio_ops,
-	.extra = &xgpio,
-};
-
-struct no_os_gpio_init_param reset_max24287_gpio_ip = {
-	.port = RESET_MAX24287_PORT,
-	.number = RESET_MAX24287_PIN,
-	.platform_ops = &max_gpio_ops,
-	.extra = &xgpio,
-};
-
-struct no_os_gpio_init_param mdc_adin1300_gpio_ip = {
-	.port = MDC_ADIN1300_PORT,
-	.number = MDC_ADIN1300_PIN,
-	.platform_ops = &max_gpio_ops,
-	.extra = &xgpio,
-};
-
-struct no_os_gpio_init_param mdio_adin1300_gpio_ip = {
-	.port = MDIO_ADIN1300_PORT,
-	.number = MDIO_ADIN1300_PIN,
+struct no_os_gpio_init_param adin1300_mdio_gpio_ip = {
+	.port = ADIN1300_MDIO_PORT,
+	.number = ADIN1300_MDIO_PIN,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
 
 struct no_os_gpio_init_param mdc_max24287_gpio_ip = {
-	.port = MDC_MAX24287_PORT,
-	.number = MDC_MAX24287_PIN,
+	.port = MAX24287_MDC_PORT,
+	.number = MAX24287_MDC_PIN,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
 
-struct no_os_gpio_init_param mdio_max24287_gpio_ip = {
-	.port = MDIO_MAX24287_PORT,
-	.number = MDIO_MAX24287_PIN,
+struct no_os_gpio_init_param max24287_mdio_gpio_ip = {
+	.port = MAX24287_MDIO_PORT,
+	.number = MAX24287_MDIO_PIN,
 	.platform_ops = &max_gpio_ops,
 	.extra = &xgpio,
 };
+
+struct no_os_gpio_init_param brd_select_gpio_ip = {
+	.port = BRD_SELECT_PORT,
+	.number = BRD_SELECT_PIN,
+	.platform_ops = &max_gpio_ops,
+	.extra = &xgpio_1p8,
+};
+
+struct no_os_gpio_init_param led_tx_lock_gpio_ip = {
+	.port = LED_TX_LOCK_PORT,
+	.number = LED_TX_LOCK_PIN,
+	.platform_ops = &max_gpio_ops,
+	.extra = &xgpio,
+};
+
+struct no_os_gpio_init_param led_rx_lock_gpio_ip = {
+	.port = LED_RX_LOCK_PORT,
+	.number = LED_RX_LOCK_PIN,
+	.platform_ops = &max_gpio_ops,
+	.extra = &xgpio,
+};
+#endif

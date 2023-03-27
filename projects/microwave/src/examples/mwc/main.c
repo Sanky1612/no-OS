@@ -8,14 +8,24 @@
 #include "iio_hmc630x.h"
 #include "mwc.h"
 #include "iio_app.h"
+#include "led.h"
 
 volatile bool heartbeat_pulse;
 
 static int mwc_step(void *arg)
 {
+	uint8_t lock;
 	struct mwc_iio_dev *mwc = arg;
 	if (!heartbeat_pulse)
 		return 0;
+
+	lock = 0;
+	hmc630x_read(mwc->tx_iiodev->dev, HMC630X_LOCKDET, &lock);
+	led_tx_lock(lock);
+	
+	lock = 0;
+	hmc630x_read(mwc->rx_iiodev->dev, HMC630X_LOCKDET, &lock);
+	led_rx_lock(lock);
 
 	mwc_algorithms(mwc);
 
@@ -75,29 +85,58 @@ static int heartbeat_prepare(void)
 	return 0;
 }
 
+#define NO_OS_STRINGIFY(x) #x
+#define NO_OS_TOSTRING(x) NO_OS_STRINGIFY(x)
+
 int main(void)
 {
 	int ret;
-	// select between (high-band tx) and (low-band tx)
-	const bool hbtx = false;
+	struct no_os_uart_desc *console;
 	char hw_model_str[10];
-	if (hbtx)
-		strcpy(hw_model_str, "admv9611");
+	uint8_t admv9615;
+	struct no_os_gpio_desc *brd_select;
+
+	// Greeting
+	ret = no_os_uart_init(&console, &uart_console_ip);
+	if (ret)
+		return ret;
+	no_os_uart_stdio(console);
+	printf("\nwethlink-firmware %s\n", NO_OS_TOSTRING(NO_OS_VERSION));
+	
+	// Detect board type switch state
+	ret = no_os_gpio_get(&brd_select, &brd_select_gpio_ip);
+	if (ret)
+		goto end;
+	ret = no_os_gpio_direction_input(brd_select);
+	if (ret)
+		goto end;
+	ret = no_os_gpio_get_value(brd_select, &admv9615);
+	if (ret)
+		goto end;
+	if (admv9615)
+		strcpy(hw_model_str, "admv9615");
 	else
-		strcpy(hw_model_str, "admv9621");
-	const uint64_t txfreq = hbtx ? 63000000000 : 58012500000;
-	const uint64_t rxfreq = hbtx ? 58012500000 : 63000000000;
+		strcpy(hw_model_str, "admv9625");
+
+	printf("Board: %s\n", hw_model_str);
+
+	ret = led_init();
+	if (ret)
+		goto end;
+
+	const uint64_t txfreq = admv9615 ? 63000000000 : 58012500000;
+	const uint64_t rxfreq = admv9615 ? 58012500000 : 63000000000;
 
 	struct mwc_iio_dev *mwc;
 	struct mwc_iio_init_param mwc_ip = {
-		.reset_gpio_ip = &reset_gpio_ip,
+		.reset_gpio_ip = &xcvr_reset_gpio_ip,
 		.tx_autotuning = true,
 		.tx_target = 350,
 		.rx_autotuning = true,
 		.rx_target = 1950,
 		.tx_auto_ifvga = true,
 		.rx_auto_ifvga_rflna = true,
-		.hbtx = hbtx,
+		.hbtx = admv9615,
 	};
 	ret = mwc_iio_init(&mwc, &mwc_ip);
 	if (ret)
@@ -111,10 +150,10 @@ int main(void)
 	struct hmc630x_init_param txip = {0};
 	txip.type = HMC6300;
 	txip.ref_clk = HMC6300_REF_CLK_75MHz;
-	txip.en = en_gpio_ip;
-	txip.clk = clk_gpio_ip;
-	txip.data = data_gpio_ip;
-	txip.scanout = scanout_tx_gpio_ip;
+	txip.en = xcvr_en_gpio_ip;
+	txip.clk = xcvr_clk_gpio_ip;
+	txip.data = xcvr_data_gpio_ip;
+	txip.scanout = xcvr_scanout_tx_gpio_ip;
 	txip.vco = txfreq;
 	txip.enabled = true;
 	txip.temp_en = true;
@@ -131,10 +170,10 @@ int main(void)
 	struct hmc630x_init_param rxip = {0};
 	rxip.type = HMC6301;
 	rxip.ref_clk = HMC6300_REF_CLK_75MHz;
-	rxip.en = en_gpio_ip;
-	rxip.clk = clk_gpio_ip;
-	rxip.data = data_gpio_ip;
-	rxip.scanout = scanout_rx_gpio_ip;
+	rxip.en = xcvr_en_gpio_ip;
+	rxip.clk = xcvr_clk_gpio_ip;
+	rxip.data = xcvr_data_gpio_ip;
+	rxip.scanout = xcvr_scanout_rx_gpio_ip;
 	rxip.vco = rxfreq;
 	rxip.enabled = true;
 	rxip.temp_en = true;
