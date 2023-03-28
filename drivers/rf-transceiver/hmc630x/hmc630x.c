@@ -72,7 +72,7 @@ struct hmc630x_dev {
 
 /* Default values for registers as listed in datasheet, written to device at startup. */
 static const uint8_t hmc6300_default_regmap[] = {
-	0x00, 0x4a, 0xf6, 0xf6, 0x00, 0xbf, 0x6c, 0x0f,
+	0x00, 0x48, 0xf0, 0xf6, 0x00, 0xbf, 0x6c, 0x0f,
 	0x8f, 0x00, 0x53, 0x03, 0x00, 0x00, 0x00, 0x00,
 	0x36, 0xbb, 0x46, 0x02, 0x22, 0x12, 0x00, 0x62
 };
@@ -210,9 +210,9 @@ int hmc630x_init(struct hmc630x_dev **dev, struct hmc630x_init_param *init)
 		goto error;
 
 	if (init->type == HMC6300) {
-		ret = hmc630x_write(d, HMC6300_PA_PWRDWN_FAST, 1);
-		if (ret)
-			goto error;
+		// ret = hmc630x_write(d, HMC6300_PA_PWRDWN_FAST, 1);
+		// if (ret)
+		// 	goto error;
 
 		ret = hmc6300_set_rf_attn(d, init->tx.rf_attn);
 		if (ret)
