@@ -9,6 +9,7 @@
 #include "mwc.h"
 #include "iio_app.h"
 #include "led.h"
+#include "net.h"
 
 volatile bool heartbeat_pulse;
 
@@ -18,7 +19,7 @@ static int mwc_step(void *arg)
 	struct mwc_iio_dev *mwc = arg;
 	if (!heartbeat_pulse)
 		return 0;
-
+#if (TARGET_NUM == 32650)
 	lock = 0;
 	hmc630x_read(mwc->tx_iiodev->dev, HMC630X_LOCKDET, &lock);
 	led_tx_lock(lock);
@@ -26,6 +27,7 @@ static int mwc_step(void *arg)
 	lock = 0;
 	hmc630x_read(mwc->rx_iiodev->dev, HMC630X_LOCKDET, &lock);
 	led_rx_lock(lock);
+#endif
 
 	mwc_algorithms(mwc);
 
@@ -96,13 +98,14 @@ int main(void)
 	uint8_t admv9615;
 	struct no_os_gpio_desc *brd_select;
 
+#if (TARGET_NUM == 32650)
 	// Greeting
 	ret = no_os_uart_init(&console, &uart_console_ip);
 	if (ret)
 		return ret;
 	no_os_uart_stdio(console);
 	printf("\nwethlink-firmware %s\n", NO_OS_TOSTRING(NO_OS_VERSION));
-	
+
 	// Detect board type switch state
 	ret = no_os_gpio_get(&brd_select, &brd_select_gpio_ip);
 	if (ret)
@@ -113,16 +116,20 @@ int main(void)
 	ret = no_os_gpio_get_value(brd_select, &admv9615);
 	if (ret)
 		goto end;
+#else
+	admv9615 = false;
+#endif
 	if (admv9615)
 		strcpy(hw_model_str, "admv9615");
 	else
 		strcpy(hw_model_str, "admv9625");
 
 	printf("Board: %s\n", hw_model_str);
-
+#if (TARGET_NUM == 32650)
 	ret = led_init();
 	if (ret)
 		goto end;
+#endif
 
 	const uint64_t txfreq = admv9615 ? 63000000000 : 58012500000;
 	const uint64_t rxfreq = admv9615 ? 58012500000 : 63000000000;
@@ -258,12 +265,20 @@ int main(void)
 	ret = heartbeat_prepare();
 	if (ret)
 		goto end;
+#if (TARGET_NUM == 32650)
+	mwc_algorithms(mwc);
+
+	ret = net_init(admv9615);
+	if (ret)
+		goto end;
+#endif
 
 	iio_app_run(app);
 end:
+	printf("End of program: %d\n", ret);
 	iio_app_remove(app);
 	hmc630x_iio_remove(iio_tx);
 	hmc630x_iio_remove(iio_rx);
-	printf("%s returned with %d\n", __func__, ret);
-	return ret;
+	
+	return 0;
 }

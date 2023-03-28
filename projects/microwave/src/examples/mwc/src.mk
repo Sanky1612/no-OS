@@ -8,6 +8,8 @@ SRCS += $(DRIVERS)/api/no_os_gpio.c \
 	$(DRIVERS)/api/no_os_uart.c \
 	$(PLATFORM_DRIVERS)/$(PLATFORM)_uart.c \
 	$(PLATFORM_DRIVERS)/$(PLATFORM)_uart_stdio.c \
+	$(DRIVERS)/api/no_os_mdio.c \
+	$(DRIVERS)/net/mdio_bitbang.c \
 	$(NO-OS)/util/no_os_lf256fifo.c \
 	$(NO-OS)/util/no_os_util.c \
 	$(NO-OS)/util/no_os_alloc.c \
@@ -26,6 +28,8 @@ INCS += $(INCLUDE)/no_os_gpio.h \
 	$(INCLUDE)/no_os_uart.h \
 	$(PLATFORM_DRIVERS)/$(PLATFORM)_uart.h \
 	$(PLATFORM_DRIVERS)/$(PLATFORM)_uart_stdio.h \
+	$(INCLUDE)/no_os_mdio.h \
+	$(DRIVERS)/net/mdio_bitbang.h \
 	$(INCLUDE)/no_os_error.h \
 	$(INCLUDE)/no_os_util.h \
 	$(INCLUDE)/no_os_alloc.h \

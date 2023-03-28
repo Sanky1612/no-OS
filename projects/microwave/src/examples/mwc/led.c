@@ -1,6 +1,8 @@
 #include "no_os_gpio.h"
 #include "parameters.h"
 
+#if (TARGET_NUM == 32650)
+
 struct no_os_gpio_desc *tx_red;
 struct no_os_gpio_desc *tx_green;
 struct no_os_gpio_desc *rx_n;
@@ -35,3 +37,5 @@ void led_rx_lock(bool on)
 {
 	no_os_gpio_set_value(rx_lock, on ? NO_OS_GPIO_HIGH : NO_OS_GPIO_LOW);
 }
+
+#endif

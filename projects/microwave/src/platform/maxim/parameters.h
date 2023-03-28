@@ -98,7 +98,7 @@ extern struct no_os_gpio_init_param adin1300_reset_gpio_ip;
 extern struct no_os_gpio_init_param max24287_reset_gpio_ip;
 extern struct no_os_gpio_init_param adin1300_mdc_gpio_ip;
 extern struct no_os_gpio_init_param adin1300_mdio_gpio_ip;
-extern struct no_os_gpio_init_param mdc_max24287_gpio_ip;
+extern struct no_os_gpio_init_param max24287_mdc_gpio_ip;
 extern struct no_os_gpio_init_param max24287_mdio_gpio_ip;
 extern struct no_os_gpio_init_param brd_select_gpio_ip;
 extern struct no_os_gpio_init_param led_tx_red_gpio_ip;

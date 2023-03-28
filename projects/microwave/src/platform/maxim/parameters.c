@@ -97,7 +97,7 @@ struct no_os_gpio_init_param adin1300_mdio_gpio_ip = {
 	.extra = &xgpio,
 };
 
-struct no_os_gpio_init_param mdc_max24287_gpio_ip = {
+struct no_os_gpio_init_param max24287_mdc_gpio_ip = {
 	.port = MAX24287_MDC_PORT,
 	.number = MAX24287_MDC_PIN,
 	.platform_ops = &max_gpio_ops,
