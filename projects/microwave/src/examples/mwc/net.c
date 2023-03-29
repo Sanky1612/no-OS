@@ -20,6 +20,7 @@
 
 #define ADIN1300_PHY_STATUS_1		0x001a
 #define ADIN1300_HCD_TECH_MASK		NO_OS_GENMASK(9, 7)
+#define ADIN1300_LINK_STAT		NO_OS_BIT(6)
 
 #define ADIN1300_PHY_STATUS_2		0x001f
 
@@ -59,6 +60,8 @@
 
 #define ADIN1300_GE_RGMII_CFG			NO_OS_MDIO_C45_ADDR(0x1e, 0xff23)
 #define ADIN1300_GE_RGMII_EN_MASK		NO_OS_BIT(0)
+#define ADIn1300_GE_RGMII_RX_SEL_MASK		NO_OS_GENMASK(8, 6)
+#define ADIn1300_GE_RGMII_GTX_SEL_MASK		NO_OS_GENMASK(5, 3)
 #define ADIN1300_GE_RGMII_TX_ID_EN_MASK		NO_OS_BIT(1)
 #define ADIN1300_GE_RGMII_RX_ID_EN_MASK		NO_OS_BIT(2)
 
@@ -77,18 +80,23 @@
 #define MAX24287_ID2		3
 
 #define MAX24287_AN_ADV		4
-#define MAX24287_AN_RX		5
+#define MAX24287_AN_ADV_W_MASK	NO_OS_BIT(0)
 #define MAX24287_LK_MASK	NO_OS_BIT(15)
 #define MAX24287_DPLX_MASK	NO_OS_BIT(12)
 #define MAX24287_SPD_MASK	NO_OS_GENMASK(11, 10)
-#define MAX24287_ONE_MASK	NO_OS_BIT(0)
+
+#define MAX24287_AN_RX		5
 
 #define MAX24287_AN_EXP		6
 #define MAX24287_EXT_STAT	15
 #define MAX24287_JIT_DIAG	16
+
 #define MAX24287_PCSCR		17
+#define MAX24287_WD_DIS_MASK	NO_OS_BIT(6)
+#define MAX24287_EN_CDET_MASK	NO_OS_BIT(0)
 
 #define MAX24287_GMIICR			18
+#define MAX24287_GMIICR_W_MASK		NO_OS_BIT(7)
 #define MAX24287_GMIICR_SPD_MASK	NO_OS_GENMASK(15, 14)
 #define MAX24287_GMIICR_DTE_DCE_MASK	NO_OS_BIT(12)
 #define MAX24287_GMIICR_DDR_MASK	NO_OS_BIT(11)
@@ -101,8 +109,8 @@
 #define MAX24287_GPIOCR2	MAX24287_REG(1, 18)
 #define MAX24287_GPIOSR		MAX24287_REG(1, 19)
 
-#define MAX24287_PTPSR1		MAX24287_REG(2, 16)
-#define MAX24287_PTPSR1_W_MASK	NO_OS_BIT(14)	
+#define MAX24287_PTPCR1		MAX24287_REG(2, 16)
+#define MAX24287_PTPCR1_W_MASK	NO_OS_BIT(14)	
 #define MAX24287_PLL_PWDN_MASK	NO_OS_BIT(5)
 #define MAX24287_TX_PWDN_MASK	NO_OS_BIT(3)
 #define MAX24287_RX_PWDN_MASK	NO_OS_BIT(2)
@@ -165,7 +173,7 @@ void max24287_regmap(struct no_os_mdio_desc *max24287)
 		MAX24287_GPIOCR1,
 		MAX24287_GPIOCR2,
 		MAX24287_GPIOSR,
-		MAX24287_PTPSR1
+		MAX24287_PTPCR1
 	};
 	char *names[] = {
 		"BMCR",
@@ -184,7 +192,7 @@ void max24287_regmap(struct no_os_mdio_desc *max24287)
 		"GPIOCR1",
 		"GPIOCR2",
 		"GPIOSR",
-		"PTPSR1"
+		"PTPCR1"
 	};
 
 	printf("----- MAX24287 -----\n");
@@ -254,53 +262,75 @@ int net_init(bool hbtx)
 	if (ret)
 		return ret;
 	
+	// -------------- SERDES --------------------
 	// RevB sequence
-	max24287_write(serdes, MAX24287_PTPSR1, MAX24287_PTPSR1_W_MASK | MAX24287_RX_PWDN_MASK);
+	max24287_write(serdes, MAX24287_PTPCR1, MAX24287_PTPCR1_W_MASK | MAX24287_RX_PWDN_MASK);
 	no_os_mdelay(1);
-	max24287_write(serdes, MAX24287_PTPSR1, MAX24287_PTPSR1_W_MASK);
+	max24287_write(serdes, MAX24287_PTPCR1, MAX24287_PTPCR1_W_MASK);
 	max24287_write(serdes, MAX24287_BMCR, MAX24287_DP_RST_MASK);
 
+	// disable autoneg watchdog and keep comma detection and code group alignment enabled
+	//max24287_write(serdes, MAX24287_PCSCR, MAX24287_WD_DIS_MASK | MAX24287_EN_CDET_MASK);
+
 	// GMIICR
-	val = no_os_field_prep(0x80, 1); // write 1
-	val |= no_os_field_prep(MAX24287_GMIICR_SPD_MASK, 1); // 0 - 10Mbps, 1 - 100 Mbps, 2 or 3 - 1000 Mbps
-	val |= no_os_field_prep(MAX24287_GMIICR_DTE_DCE_MASK, 1);
+	val = no_os_field_prep(MAX24287_GMIICR_W_MASK, 1); // write 1
+	val |= no_os_field_prep(MAX24287_GMIICR_SPD_MASK, 2); // 0 - RGMII-10, 1 - RGMII-100, 2 - RGMII-1000 or 3 - RTBI
 	val |= no_os_field_prep(MAX24287_GMIICR_DDR_MASK, 1);
 	max24287_write(serdes, MAX24287_GMIICR, val);
 
 	// select GPIO2 & GPIO3 functions
 	max24287_write(serdes, MAX24287_GPIOCR1, 0x25); // 0x25: GPIO2 125 MHz TX PLL, GPIO3 25MHz or 125MHz from receive clock recovery PLL
 
+	max24287_read(serdes, MAX24287_IR, &val); // clean the IR statuses
+	max24287_read(serdes, MAX24287_BMSR, &val); // clean the BMSR statuses
+
+	// auto negotiation
+	//if (!hbtx)
+	{
+		val = no_os_field_prep(MAX24287_AN_ADV_W_MASK, 1);
+		val |= no_os_field_prep(MAX24287_LK_MASK, 1);
+		val |= no_os_field_prep(MAX24287_DPLX_MASK, 1);
+		val |= no_os_field_prep(MAX24287_SPD_MASK, 2); // 0 - 10Mbps, 1 - 100 Mbps, 2 - 1000 Mbps
+		max24287_write(serdes, MAX24287_AN_ADV, val);
+		//max24287_write(serdes, MAX24287_BMCR, MAX24287_AN_EN_MASK | MAX24287_AN_START_MASK);
+	}
+	// else
+	// {
+	// 	max24287_write(serdes, MAX24287_AN_ADV, 0x0001);
+	// }
+
+	
+	no_os_mdelay(1000);
+
+	max24287_regmap(serdes);
+
+	// -------------- PHY --------------------
+	// back-to-back delay
 	no_os_mdio_read(phy, ADIN1300_GE_RGMII_CFG, &val);
-	val &= ~(ADIN1300_GE_RGMII_TX_ID_EN_MASK | ADIN1300_GE_RGMII_RX_ID_EN_MASK);
+	val &= ~(ADIN1300_GE_RGMII_TX_ID_EN_MASK | ADIN1300_GE_RGMII_RX_ID_EN_MASK); 
+		//| ADIn1300_GE_RGMII_RX_SEL_MASK | ADIn1300_GE_RGMII_GTX_SEL_MASK);
 	val |= no_os_field_prep(ADIN1300_GE_RGMII_RX_ID_EN_MASK, 1);
+	val |= no_os_field_prep(ADIN1300_GE_RGMII_TX_ID_EN_MASK, 1);
+	// val |= no_os_field_prep(ADIn1300_GE_RGMII_RX_SEL_MASK, 0x7);
+	// val |= no_os_field_prep(ADIn1300_GE_RGMII_GTX_SEL_MASK, 0x7);
+	
 	no_os_mdio_write(phy, ADIN1300_GE_RGMII_CFG, val);
+	no_os_mdio_read(phy, ADIN1300_GE_RGMII_CFG, &val);
+	printf("GE_RGMII_CFG 0x%x\n", val);
 
 	// select GP_CLK and CLK25_REF
 	no_os_mdio_write(phy, ADIN1300_GE_CLK_CFG,
 		ADIN1300_GE_REF_CLK_EN_MASK | ADIN1300_GE_CLK_RCVR_125_EN_MASK);
 
 	// wait a bit for PHY to establish link
-	no_os_mdelay(5000);
-
-	// auto negotiation
-	if (hbtx)
-	{
-		val = no_os_field_prep(MAX24287_ONE_MASK, 1);
-		val |= no_os_field_prep(MAX24287_LK_MASK, 1);
-		val |= no_os_field_prep(MAX24287_DPLX_MASK, 1);
-		val |= no_os_field_prep(MAX24287_SPD_MASK, 1); // 0 - 10Mbps, 1 - 100 Mbps, 2 - 1000 Mbps
-		max24287_write(serdes, MAX24287_AN_ADV, val);
-		max24287_write(serdes, MAX24287_BMCR, MAX24287_AN_EN_MASK | MAX24287_AN_START_MASK);
+	int timeout;
+	while(timeout < 5000) {
+		timeout++;
+		no_os_mdio_read(phy, ADIN1300_PHY_STATUS_1, &val);
+		if (val & ADIN1300_LINK_STAT)
+			break;
+		no_os_mdelay(1);
 	}
-	else
-	{
-		max24287_write(serdes, MAX24287_AN_ADV, 0x0001);
-	}
-
-	max24287_read(serdes, MAX24287_IR, &val); // clean the IR statuses
-	no_os_mdelay(1000);
-
-	max24287_regmap(serdes);
 	adin1300_regmap(phy);
 
 	// figure out resolved speed
@@ -316,7 +346,7 @@ int net_init(bool hbtx)
 		"reserved",
 		"reserved"
 	};
-	printf("Resolved speed: %s (0x%x)\n", speeds[val], val);
+	printf("Resolved speed: %s (0x%x) in %d ms\n", speeds[val], val, timeout);
 
 	return 0;
 }
