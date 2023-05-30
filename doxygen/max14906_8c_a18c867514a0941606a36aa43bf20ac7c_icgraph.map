@@ -1,0 +1,10 @@
+<map id="max14906_ch_func" name="max14906_ch_func">
+<area shape="rect" id="node1" title="Configure a channel&#39;s function." alt="" coords="703,71,851,98"/>
+<area shape="rect" id="node2" href="$iio__max14906_8c.html#a6821b5e1c7f1557c56453ea435f5278c" title="Configure a set if IIO channels based on the operation modes of the enabled physical channels." alt="" coords="497,5,655,47"/>
+<area shape="rect" id="node3" href="$max14906_8h.html#af52569104fb21ebf27fbd9f61ea2ccbe" title="Initialize and configure the MAX14906 device." alt="" coords="517,71,635,98"/>
+<area shape="rect" id="node7" href="$max14906_8h.html#ae8b4998f84da870cb84e9e8dfabea4c2" title="Free the resources allocated during init and place all the channels in high&#45;z." alt="" coords="502,122,650,149"/>
+<area shape="rect" id="node4" href="$iio__max14906_8h.html#a5536d17cd62bda79c445c5b0b009291a" title="Initializes the MAX14906 IIO descriptor." alt="" coords="293,71,435,98"/>
+<area shape="rect" id="node5" href="$swiot__fw_8h.html#a427f9beea005fab8fccd9774acb53fc3" title="IIO example main execution." alt="" coords="108,97,231,123"/>
+<area shape="rect" id="node6" href="$swiot1l_2src_2platform_2maxim_2main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="Main function." alt="" coords="5,97,60,123"/>
+<area shape="rect" id="node8" href="$iio__max14906_8h.html#a022d94aa31e63d0f12002b02051c53fd" title="Free resources allocated by the init function." alt="" coords="279,122,449,149"/>
+</map>

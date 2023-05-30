@@ -1,0 +1,6 @@
+<map id="drivers/digital&#45;io/max14906/iio_max14906.h" name="drivers/digital&#45;io/max14906/iio_max14906.h">
+<area shape="rect" id="node1" title="Header file of MAX14906 IIO Driver." alt="" coords="205,5,408,47"/>
+<area shape="rect" id="node2" href="$iio__max14906_8c.html" title="Source file of IIO MAX14906 Driver." alt="" coords="5,95,208,136"/>
+<area shape="rect" id="node3" href="$swiot_8c.html" title="Source file for the swiot IIO driver." alt="" coords="233,95,381,136"/>
+<area shape="rect" id="node4" href="$swiot__fw_8c.html" title="Main project file for the swiot1l project." alt="" coords="405,95,553,136"/>
+</map>
