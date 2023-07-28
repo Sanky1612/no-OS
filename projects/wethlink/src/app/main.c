@@ -152,6 +152,8 @@ int main(void)
 	if (ret)
 		goto end;
 
+	goto load_hardcoded_defaults;
+
 	if (!pin && HW_VERSION >= 1)
 apply_factory_defaults:
 	{
@@ -172,7 +174,7 @@ apply_factory_defaults:
 		{
 			printf("EEPROM: CRC mismatch, read 0x%x, computed 0x%x\n", eebuf[nvmpsz], crc);
 			printf("EEPROM: cannot load bad factory defaults.\n");
-			
+load_hardcoded_defaults:
 			memcpy(eebuf, &factory_defaults_template, nvmpsz);
 			printf("EEPROM: loaded hardcoded parameters instead.\n");
 
@@ -230,6 +232,11 @@ post_eeprom:
 		.eeprom = eeprom,
 		.adin1300 = iio_adin1300->dev,
 		.max24287 = iio_max24287->dev,
+		.hw_serial = nvmp->hw_serial,
+		.hw_version = nvmp->hw_version,
+		.carrier_model = nvmp->carrier_model,
+		.carrier_serial = nvmp->carrier_serial,
+		.carrier_version = nvmp->carrier_version,
 	};
 	ret = mwc_iio_init(&mwc, &mwc_ip);
 	if (ret)
