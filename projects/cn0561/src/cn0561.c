@@ -217,6 +217,12 @@ int main()
 	if (ret != 0)
 		return -1;
 
+	for(int adc_channel = CH0; adc_channel <= CH3; adc_channel++) {
+		ret = ad713x_dig_filter_sel_ch(cn0561_dev, SINC3, adc_channel);
+		if (ret != 0)
+			return -1;
+	} /* Select SINC3 filtering, enable higher data convertion rates */
+
 	no_os_mdelay(1000);
 
 	ret = ad713x_spi_reg_write(cn0561_dev, AD713X_REG_GPIO_DIR_CTRL, 0xE7);
