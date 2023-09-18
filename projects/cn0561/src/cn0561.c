@@ -331,6 +331,29 @@ int main()
 		}
 	}
 
+	uint8_t reg_data;
+	uint8_t reg_addr;
+	for(reg_addr = 0x0; reg_addr <= 0x7; reg_addr++) {
+		ret = ad713x_spi_reg_read(cn0561_dev, reg_addr, &reg_data);
+		if (ret != 0)
+			printf("REG%x: error read\n", reg_addr);
+		printf("REG%x: 0x%08x\n", reg_addr, reg_data);
+	}
+
+	for(reg_addr = 0xA; reg_addr <= 0x42; reg_addr++) {
+		ret = ad713x_spi_reg_read(cn0561_dev, reg_addr, &reg_data);
+		if (ret != 0)
+			printf("REG%x: error read\n", reg_addr);
+		printf("REG%x: 0x%08x\n", reg_addr, reg_data);
+	}
+
+	for(reg_addr = 0x47; reg_addr <= 0x48; reg_addr++) {
+		ret = ad713x_spi_reg_read(cn0561_dev, reg_addr, &reg_data);
+		if (ret != 0)
+			printf("REG%x: error read\n", reg_addr);
+		printf("REG%x: 0x%08x\n", reg_addr, reg_data);
+	} /* READ ADC REGISTER VALUES */
+
 	ad713x_remove(cn0561_dev);
 	print("Bye\n\r");
 
