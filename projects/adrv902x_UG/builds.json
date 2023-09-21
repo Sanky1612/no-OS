@@ -1,0 +1,10 @@
+{
+      "xilinx": {
+            "demo": {
+                  "flags": "",
+                  "hardware": [
+                        "adrv9025_zcu102"
+                  ]
+            }
+      }
+}
