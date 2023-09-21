@@ -10,3 +10,10 @@ ACCELEROMETERS
    :maxdepth: 1
 
    drivers/adxl355
+
+ADC
+===
+.. toctree::
+   :maxdepth: 1
+
+   drivers/adm1177
