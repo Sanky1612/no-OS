@@ -23,4 +23,5 @@ Contents
    :maxdepth: 2
 
    drivers_guide
+   drivers_doc
    contributing
