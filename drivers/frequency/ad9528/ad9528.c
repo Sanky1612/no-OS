@@ -41,10 +41,19 @@
 /***************************** Include Files **********************************/
 /******************************************************************************/
 #include <stdlib.h>
+#include <limits.h>
 #include <stdio.h>
-#include "no_os_util.h"
+#include "no_os_print_log.h"
 #include "no_os_alloc.h"
+#include "no_os_error.h"
+#include "no_os_util.h"
+#include "no_os_clk.h"
 #include "ad9528.h"
+#include "jesd204.h"
+
+struct ad9528_jesd204_priv {
+	struct ad9528_dev *device;
+};
 
 static bool ad9528_pll2_valid_calib_div(unsigned int div)
 {
@@ -316,6 +325,8 @@ int32_t ad9528_init(struct ad9528_init_param *init_param)
 	init_param->pdata->pll1_feedback_src_vcxo = 1;
 	init_param->pdata->pll1_charge_pump_current_nA = 5000;
 	init_param->pdata->pll1_bypass_en = 0;
+	init_param->pdata->jdev_max_sysref_freq = INT_MAX;
+	init_param->pdata->jdev_desired_sysref_freq = 0;
 	init_param->pdata->pll2_charge_pump_current_nA = 805000;
 	init_param->pdata->pll2_freq_doubler_en = 0;
 	init_param->pdata->pll2_r1_div = 1;
@@ -333,7 +344,7 @@ int32_t ad9528_init(struct ad9528_init_param *init_param)
 	for (i = 0; i < init_param->pdata->num_channels; i++) {
 		(&init_param->pdata->channels[i])->channel_num = 0;
 		(&init_param->pdata->channels[i])->sync_ignore_en = 0;
-		(&init_param->pdata->channels[i])->output_dis = 0;
+		(&init_param->pdata->channels[i])->output_dis = 1;
 		(&init_param->pdata->channels[i])->
 		driver_mode = DRIVER_MODE_LVDS;
 		(&init_param->pdata->channels[i])->signal_source = SOURCE_VCO;
@@ -344,6 +355,334 @@ int32_t ad9528_init(struct ad9528_init_param *init_param)
 	return(0);
 }
 
+/**
+ * @brief Initialize the CLK structure.
+ *
+ * @param desc - The CLK descriptor.
+ * @param init_param - The structure holding the device initial parameters.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+static int ad9528_clk_init(struct no_os_clk_desc **desc,
+			   const struct no_os_clk_init_param *init_param)
+{
+	struct ad9528_dev *ad9528_d;
+
+	/* Exit if we have no init_params */
+	if (!init_param) {
+		return -EINVAL;
+	}
+
+	*desc = no_os_calloc(1, sizeof(**desc));
+	/* Exit if memory cannot be allocated */
+	if(!*desc) {
+		free(*desc);
+		return -ENOMEM;
+	}
+
+	ad9528_d = init_param->dev_desc;
+	/* Exit if no hardware device specified in init_param */
+	if(!ad9528_d) {
+		free(*desc);
+		return -ENOMEM;
+	}
+
+	(*desc)->name = init_param->name;
+	(*desc)->hw_ch_num = init_param->hw_ch_num;
+
+	(*desc)->dev_desc = (void *)no_os_calloc(1, sizeof(struct ad9528_dev));
+
+	(*desc)->dev_desc = init_param->dev_desc;
+
+	return 0;
+}
+
+
+/**
+ * @brief Remove the CLK structure.
+ *
+ * @param desc - The CLK descriptor.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+static int ad9528_clk_remove(struct no_os_clk_desc *desc)
+{
+	struct ad9528_dev *ad9528_dev;
+	int ret;
+
+	ad9528_dev = desc->dev_desc;
+
+	if(!ad9528_dev)
+		return -ENODEV;
+
+	free(desc);
+
+	ret = ad9528_remove(desc->dev_desc);
+	if (ret) {
+		free(desc->dev_desc);
+		return ret;
+	}
+
+	return 0;
+}
+
+/**
+ * @brief Set the clock rate.
+ *
+ * @param desc - The CLK descriptor.
+ * @param rate - The desired rate.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+static int ad9528_clk_set_rate_no_os(struct no_os_clk_desc *desc, uint64_t rate)
+{
+	return ad9528_clk_set_rate(desc->dev_desc, desc->hw_ch_num,
+				   (uint32_t)rate);
+}
+
+/**
+ * @brief Calculate closest possible rate.
+ *
+ * @param desc - The CLK descriptor.
+ * @param rate - The desired rate.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+static int ad9528_clk_round_rate_no_os(struct no_os_clk_desc *desc,
+				       uint64_t rate, uint64_t *rounded_rate)
+{
+	*rounded_rate = ad9528_clk_round_rate(desc->dev_desc, desc->hw_ch_num,
+					      rate);
+
+	if (*rounded_rate <= 0)
+		return -EINVAL;
+
+	return 0;
+}
+
+/**
+ * @brief Enable clock.
+ *
+ * @param desc - The CLK descriptor.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+static int ad9528_clk_enable(struct no_os_clk_desc *desc)
+{
+	return ad9528_sync(desc->dev_desc);
+}
+
+static const struct no_os_clk_platform_ops ad9528_no_os_clk_ops = {
+	.init = &ad9528_clk_init,
+	.clk_enable = &ad9528_clk_enable,
+	.clk_round_rate = &ad9528_clk_round_rate_no_os,
+	.clk_set_rate = &ad9528_clk_set_rate_no_os,
+	.remove = &ad9528_clk_remove,
+};
+
+static int ad9528_lmfc_lemc_validate(struct ad9528_dev *dev, uint64_t dividend,
+				     uint32_t divisor)
+{
+	uint32_t rem, rem_l, rem_u, gcd_val, min;
+
+	if (divisor > dividend) {
+		uint32_t best_num, best_den;
+
+		no_os_rational_best_approximation(dividend, divisor,
+						  65535, 65535, &best_num, &best_den);
+
+		divisor /= best_den;
+	}
+
+	gcd_val = no_os_greatest_common_divisor(dividend, divisor);
+	min = NO_OS_DIV_ROUND_CLOSEST(dev->ad9528_st.sysref_src_pll2, 65535UL);
+
+	if (gcd_val >= min) {
+		pr_debug(
+			"%s: dividend=%llu divisor=%u GCD=%u (st->sysref_src_pll2=%lu, min=%u)",
+			__func__, dividend, divisor, gcd_val, st->sysref_src_pll2, min);
+
+		dev->jdev_lmfc_lemc_gcd = gcd_val;
+		return 0;
+	}
+
+	no_os_div_u64_rem(dev->ad9528_st.sysref_src_pll2, divisor, &rem);
+
+	pr_debug(
+		"%s: dividend=%llu divisor=%u GCD=%u rem=%u (st->sysref_src_pll2=%lu)",
+		__func__, dividend, divisor, gcd_val, rem, st->sysref_src_pll2);
+
+	no_os_div_u64_rem(dividend, divisor, &rem);
+	no_os_div_u64_rem(dividend, divisor - 1, &rem_l);
+	no_os_div_u64_rem(dividend, divisor + 1, &rem_u);
+
+	if (rem_l > rem && rem_u > rem) {
+		if (dev->jdev_lmfc_lemc_gcd)
+			dev->jdev_lmfc_lemc_gcd = no_os_min(dev->jdev_lmfc_lemc_gcd, divisor);
+		else
+			dev->jdev_lmfc_lemc_gcd = divisor;
+
+		return 0;
+	}
+
+	return -EINVAL;
+}
+
+static int ad9528_jesd204_link_supported(struct jesd204_dev *jdev,
+		enum jesd204_state_op_reason reason,
+		struct jesd204_link *lnk)
+{
+	struct ad9528_jesd204_priv *priv = jesd204_dev_priv(jdev);
+	struct ad9528_dev *dev = priv->device;
+	int ret;
+	unsigned long rate;
+
+	if (reason != JESD204_STATE_OP_REASON_INIT) {
+		dev->jdev_lmfc_lemc_rate = 0;
+		dev->jdev_lmfc_lemc_gcd = 0;
+
+		return JESD204_STATE_CHANGE_DONE;
+	}
+
+	pr_debug("%s:%d link_num %u reason %s\n", __func__, __LINE__, lnk->link_id,
+		 jesd204_state_op_reason_str(reason));
+
+	ret = jesd204_link_get_lmfc_lemc_rate(lnk, &rate);
+	if (ret < 0)
+		return ret;
+
+	if (dev->jdev_lmfc_lemc_rate) {
+		dev->jdev_lmfc_lemc_rate = no_os_min(dev->jdev_lmfc_lemc_rate, (uint32_t)rate);
+		ret = ad9528_lmfc_lemc_validate(dev, dev->jdev_lmfc_lemc_gcd, rate);
+	} else {
+		dev->jdev_lmfc_lemc_rate = rate;
+		ret = ad9528_lmfc_lemc_validate(dev, dev->ad9528_st.sysref_src_pll2, rate);
+	}
+
+	pr_debug("%s:%d link_num %u LMFC/LEMC %u/%lu gcd %u\n",
+		 __func__, __LINE__, lnk->link_id, st->jdev_lmfc_lemc_rate,
+		 rate, st->jdev_lmfc_lemc_gcd);
+
+	if (ret && lnk->subclass != JESD204_SUBCLASS_0)
+		return ret;
+
+	return JESD204_STATE_CHANGE_DONE;
+}
+
+static int ad9528_jesd204_sysref(struct jesd204_dev *jdev)
+{
+	struct ad9528_jesd204_priv *priv = jesd204_dev_priv(jdev);
+	struct ad9528_dev *dev = priv->device;
+	uint32_t val;
+	int ret;
+
+	pr_debug("%s:%d\n", __func__, __LINE__);
+
+	if (dev->sysref_req_gpio && dev->pdata->sysref_req_en) {
+		no_os_gpio_direction_output(dev->sysref_req_gpio, 1);
+		no_os_mdelay(1);
+		ret = no_os_gpio_direction_output(dev->sysref_req_gpio, 0);
+	} else {
+		ret = ad9528_spi_read_n(dev, AD9528_SYSREF_CTRL, &val);
+		if (ret) {
+			return ret;
+		}
+
+		val &= ~AD9528_SYSREF_PATTERN_REQ;
+
+		ad9528_spi_write_n(dev, AD9528_SYSREF_CTRL, val);
+
+		val |= AD9528_SYSREF_PATTERN_REQ;
+
+		ret = ad9528_spi_write_n(dev, AD9528_SYSREF_CTRL, val);
+
+		ad9528_io_update(dev);
+	}
+
+	return ret;
+}
+
+static int ad9528_jesd204_link_pre_setup(struct jesd204_dev *jdev,
+		enum jesd204_state_op_reason reason,
+		struct jesd204_link *lnk)
+{
+	struct ad9528_jesd204_priv *priv = jesd204_dev_priv(jdev);
+	struct ad9528_dev *dev = priv->device;
+	int ret, kdiv;
+
+	if (reason != JESD204_STATE_OP_REASON_INIT)
+		return JESD204_STATE_CHANGE_DONE;
+
+	pr_debug("%s:%d link_num %u reason %s\n", __func__, __LINE__, lnk->link_id,
+		 jesd204_state_op_reason_str(reason));
+
+
+	if (dev->pdata->jdev_desired_sysref_freq && (dev->jdev_lmfc_lemc_gcd %
+			dev->pdata->jdev_desired_sysref_freq == 0)) {
+		dev->jdev_lmfc_lemc_gcd = dev->pdata->jdev_desired_sysref_freq;
+	} else {
+		while ((dev->jdev_lmfc_lemc_gcd >
+			dev->pdata->jdev_max_sysref_freq) &&
+		       (dev->jdev_lmfc_lemc_gcd %
+			(dev->jdev_lmfc_lemc_gcd >> 1) == 0))
+			dev->jdev_lmfc_lemc_gcd >>= 1;
+	}
+
+	kdiv = NO_OS_DIV_ROUND_CLOSEST(dev->ad9528_st.sysref_src_pll2,
+				       dev->jdev_lmfc_lemc_gcd);
+	kdiv = no_os_clamp_t(uint32_t, kdiv, 1UL, 65535UL);
+
+	ret = ad9528_spi_write_n(dev, AD9528_SYSREF_K_DIVIDER,
+				 AD9528_SYSREF_K_DIV(kdiv));
+
+	if (!ret)
+		dev->ad9528_st.vco_out_freq[AD9528_SYSREF] =
+			NO_OS_DIV_ROUND_CLOSEST(dev->ad9528_st.sysref_src_pll2, kdiv);
+
+	ad9528_io_update(dev);
+
+	if (dev->sysref_req_gpio && dev->pdata->sysref_req_en &&
+	    dev->pdata->sysref_pattern_mode == SYSREF_PATTERN_CONTINUOUS)
+		no_os_gpio_direction_output(dev->sysref_req_gpio, 1);
+
+	return JESD204_STATE_CHANGE_DONE;
+}
+
+static int ad9528_jesd204_clks_sync(struct jesd204_dev *jdev,
+				    enum jesd204_state_op_reason reason)
+{
+	struct ad9528_jesd204_priv *priv = jesd204_dev_priv(jdev);
+	struct ad9528_dev *dev = priv->device;
+	int ret;
+
+	if (reason != JESD204_STATE_OP_REASON_INIT)
+		return JESD204_STATE_CHANGE_DONE;
+
+	pr_debug("%s:%d reason %s\n", __func__, __LINE__,
+		 jesd204_state_op_reason_str(reason));
+
+	ret = ad9528_sync(dev);
+	if (ret)
+		return ret;
+
+	return JESD204_STATE_CHANGE_DONE;
+}
+
+static const struct jesd204_dev_data jesd204_ad9528_init = {
+	.sysref_cb = ad9528_jesd204_sysref,
+	.state_ops = {
+		[JESD204_OP_LINK_SUPPORTED] = {
+			.per_link = ad9528_jesd204_link_supported,
+		},
+		[JESD204_OP_LINK_PRE_SETUP] = {
+			.per_link = ad9528_jesd204_link_pre_setup,
+		},
+		[JESD204_OP_CLK_SYNC_STAGE1] = {
+			.per_device = ad9528_jesd204_clks_sync,
+			.mode = JESD204_STATE_OP_MODE_PER_DEVICE,
+		},
+	},
+};
 
 /***************************************************************************//**
  * @brief Initializes the AD9528.
@@ -356,6 +695,7 @@ int32_t ad9528_init(struct ad9528_init_param *init_param)
 int32_t ad9528_setup(struct ad9528_dev **device,
 		     struct ad9528_init_param init_param)
 {
+	struct ad9528_jesd204_priv *priv;
 	struct ad9528_channel_spec *chan;
 	uint32_t active_mask = 0;
 	uint32_t ignoresync_mask = 0;
@@ -368,10 +708,39 @@ int32_t ad9528_setup(struct ad9528_dev **device,
 	uint32_t i;
 	uint32_t pll2_ndiv, pll2_ndiv_a_cnt, pll2_ndiv_b_cnt;
 	struct ad9528_dev *dev;
+	struct no_os_clk_desc **clocks;
+	struct no_os_clk_init_param clk_init;
+	const char *names[AD9528_NUM_CHAN] = {
+		"ad9528-1_out0", "ad9528-1_out1", "ad9528-1_out2", "ad9528-1_out3", "ad9528-1_out4",
+		"ad9528-1_out5", "ad9528-1_out6", "ad9528-1_out7", "ad9528-1_out8", "ad9528-1_out9",
+		"ad9528-1_out10", "ad9528-1_out11", "ad9528-1_out12", "ad9528-1_out13"
+	};
 
 	dev = (struct ad9528_dev *)no_os_malloc(sizeof(*dev));
 	if (!dev)
 		return -1;
+
+	if (init_param.export_no_os_clk) {
+		clocks = malloc(AD9528_NUM_CHAN * sizeof(struct no_os_clk_desc *));
+		if (!clocks)
+			return -1;
+		for (i = 0; i < AD9528_NUM_CHAN; i++) {
+			clocks[i] = no_os_calloc(1, sizeof(struct no_os_clk_desc));
+			if (!clocks[i])
+				return -1;
+			/* Initialize clk component */
+			clk_init.name = names[i];
+			clk_init.hw_ch_num = i;
+			clk_init.platform_ops = &ad9528_no_os_clk_ops;
+			clk_init.dev_desc = dev;
+
+			ret = no_os_clk_init(&clocks[i], &clk_init);
+			if (ret)
+				return ret;
+		}
+	}
+
+	dev->clk_desc = clocks;
 
 	dev->pdata = init_param.pdata;
 
@@ -468,7 +837,8 @@ int32_t ad9528_setup(struct ad9528_dev **device,
 				       AD9528_PLL1_REFB_CMOS_NEG_INP_EN) |
 				 AD_IF(pll1_feedback_src_vcxo,
 				       AD9528_PLL1_SOURCE_VCXO) |
-				 AD9528_PLL1_REF_MODE(dev->pdata->ref_mode));
+				 AD9528_PLL1_REF_MODE(dev->pdata->ref_mode) |
+				 AD9528_PLL1_OSC_CTRL_FAIL_VCC_BY2_EN);
 	if (ret < 0)
 		return ret;
 
@@ -556,6 +926,11 @@ int32_t ad9528_setup(struct ad9528_dev **device,
 
 	dev->ad9528_st.vco_out_freq[AD9528_VCXO] = dev->pdata->vcxo_freq;
 
+	dev->ad9528_st.sysref_src_pll2 = vco_freq / (pll2_ndiv * 2);
+
+	dev->ad9528_st.vco_out_freq[AD9528_SYSREF] = dev->ad9528_st.sysref_src_pll2 /
+			dev->pdata->sysref_k_div;
+
 	ret = ad9528_spi_write_n(dev,
 				 AD9528_PLL2_R1_DIVIDER,
 				 AD9528_PLL2_R1_DIV(dev->pdata->pll2_r1_div));
@@ -619,8 +994,11 @@ pll2_bypassed:
 	if (ret < 0)
 		return ret;
 
-	sysref_ctrl = AD9528_SYSREF_PATTERN_MODE(SYSREF_PATTERN_CONTINUOUS) |
-		      AD9528_SYSREF_SOURCE(dev->pdata->sysref_src);
+	sysref_ctrl = AD9528_SYSREF_PATTERN_MODE(dev->pdata->sysref_pattern_mode) |
+		      AD9528_SYSREF_SOURCE(dev->pdata->sysref_src) |
+		      AD9528_SYSREF_NSHOT_MODE(dev->pdata->sysref_nshot_mode) |
+		      AD9528_SYSREF_PATTERN_TRIGGER_CTRL(dev->pdata->sysref_req_trigger_mode) |
+		      (dev->pdata->sysref_req_en ? AD9528_SYSREF_REQUEST_BY_PIN : 0);
 	ret = ad9528_spi_write_n(dev,
 				 AD9528_SYSREF_CTRL,
 				 sysref_ctrl);
@@ -697,6 +1075,19 @@ pll2_bypassed:
 	ret = ad9528_sync(dev);
 	if (ret < 0)
 		return ret;
+
+//	uint32_t ii = 0, val = 0;
+//
+//	for (ii = 0x400; ii <= 0x404; ii++) {
+//		ad9528_spi_read_n(dev, AD9528_1B(ii), &val);
+//		printf("Addx %#x = %#x\n", ii, val);
+//	}
+
+	ret = jesd204_dev_register(&dev->jdev, &jesd204_ad9528_init);
+	if (ret < 0)
+		return ret;
+	priv = jesd204_dev_priv(dev->jdev);
+	priv->device = dev;
 
 	*device = dev;
 
